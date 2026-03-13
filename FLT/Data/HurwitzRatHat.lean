@@ -46,7 +46,12 @@ noncomputable abbrev j₁ : D →ₐ[ℤ] D^ := Algebra.TensorProduct.includeLef
 -- (Algebra.TensorProduct.assoc ℤ ℚ 𝓞 ZHat).symm.trans Algebra.TensorProduct.includeLeft
 
 lemma injective_hRat :
-    Function.Injective j₁ := sorry -- flatness
+    Function.Injective j₁ := by
+  haveI : Module.Free ℤ 𝓞 := by
+    apply?
+  letI : Module.Flat ℤ 𝓞 := Module.Flat.of_free
+  letI : Module.Flat ℤ D := Module.Flat.instTensorProduct
+  exact Algebra.TensorProduct.includeLeft_injective Int.cast_injective
 
 /-- The inclusion from the profinite Hurwitz quaternions to to 𝔸+𝔸i+𝔸j+𝔸k,
 with 𝔸 the finite adeles of ℚ. -/
