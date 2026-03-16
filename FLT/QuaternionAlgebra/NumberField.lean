@@ -189,6 +189,22 @@ noncomputable def GL2.localTameLevel (v : HeightOneSpectrum (𝓞 F)) :
     rw [Valuation.map_sub_swap, v_det_val_mem_localFullLevel_eq_one ha.1]
     simp [ha.2]
 
+/-- The local tame level `U₁(v)` is a subgroup of the local full level `GL₂(𝒪ᵥ)`. -/
+lemma GL2.localTameLevel_le_localFullLevel (v : HeightOneSpectrum (𝓞 F)) :
+    localTameLevel v ≤ localFullLevel v :=
+  sorry
+
+/-- Membership in the local tame level `U₁(v)` can be characterized purely in terms of
+valuations: an element of `GL₂(Fᵥ)` lies in `U₁(v)` if and only if all entries have
+valuation at most 1, the determinant has valuation exactly 1, the diagonal entries are
+congruent modulo `v`, and the lower-left entry has valuation strictly less than 1. -/
+theorem GL2.mem_localTameLevel_iff {v : HeightOneSpectrum (𝓞 F)}
+    {x : GL (Fin 2) (v.adicCompletion F)} :
+    x ∈ localTameLevel v ↔
+      (∀ i j, Valued.v (x.val i j) ≤ 1) ∧ Valued.v x.val.det = 1 ∧
+      Valued.v (x.val 0 0 - x.val 1 1) < 1 ∧ Valued.v (x.val 1 0) < 1 :=
+  sorry
+
 -- the clever way to prove this is a theorem of the form "if A is an open submonoid of R
 -- then Aˣ is an open subgroup of Rˣ"
 theorem GL2.localTameLevel.isOpen (v : HeightOneSpectrum (𝓞 F)) :
