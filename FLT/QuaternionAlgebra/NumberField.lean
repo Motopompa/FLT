@@ -77,8 +77,52 @@ theorem M2.localFullLevel.isCompact (v : HeightOneSpectrum (𝓞 F)) :
 -- the clever way to prove this is a theorem of the form "if A is an open submonoid of R
 -- then Aˣ is an open subgroup of Rˣ"
 theorem GL2.localFullLevel.isOpen (v : HeightOneSpectrum (𝓞 F)) :
-    IsOpen (GL2.localFullLevel v).carrier :=
-  sorry
+    IsOpen (GL2.localFullLevel v).carrier := by
+  rw [isOpen_induced_iff]
+  refine ⟨(M2.localFullLevel v).carrier ×ˢ (MulOpposite.unop ⁻¹' (M2.localFullLevel v).carrier), ?_, ?_⟩
+  · exact IsOpen.prod (M2.localFullLevel.isOpen v)
+      (MulOpposite.continuous_unop.isOpen_preimage _ (M2.localFullLevel.isOpen v))
+  · ext x
+    simp only [Set.mem_preimage, Set.mem_prod, Units.embedProduct_apply,
+      MulOpposite.unop_op, GL2.localFullLevel, M2.localFullLevel]
+    constructor
+    · intro ⟨hval, hinv⟩
+      let Mval : Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) :=
+        Matrix.of fun i j => ⟨(↑x : Matrix _ _ _) i j, hval i j⟩
+      let Minv : Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) :=
+        Matrix.of fun i j => ⟨(↑x⁻¹ : Matrix _ _ _) i j, hinv i j⟩
+      have injective_map : Function.Injective
+          ((v.adicCompletionIntegers F).subtype.mapMatrix :
+           Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) →
+           Matrix (Fin 2) (Fin 2) (v.adicCompletion F)) := by
+        intro a b hab
+        ext i j
+        exact congr_fun (congr_fun hab i) j
+      have hMval : (v.adicCompletionIntegers F).subtype.mapMatrix Mval = x.val := by
+        ext i j; simp [Mval, RingHom.mapMatrix_apply]
+      have hMinv : (v.adicCompletionIntegers F).subtype.mapMatrix Minv = x.inv := by
+        ext i j; simp [Minv, RingHom.mapMatrix_apply]
+      have hmul1 : Mval * Minv = 1 := by
+        apply injective_map
+        simp only [RingHom.map_mul, RingHom.map_one, hMval, hMinv]
+        exact x.val_inv
+      have hmul2 : Minv * Mval = 1 := by
+        apply injective_map
+        simp only [RingHom.map_mul, RingHom.map_one, hMval, hMinv]
+        exact x.inv_val
+      exact ⟨⟨Mval, Minv, hmul1, hmul2⟩, by ext i j; rfl⟩
+    · intro ⟨y, hy⟩
+      constructor
+      · intro i j
+        rw [← hy]
+        simp only [Units.coe_map, MonoidHom.coe_coe, RingHom.toMonoidHom_eq_coe,
+          RingHom.mapMatrix_apply]
+        exact (y.val i j).prop
+      · intro i j
+        rw [← hy]
+        simp only [Units.coe_map_inv, MonoidHom.coe_coe, RingHom.toMonoidHom_eq_coe,
+          RingHom.mapMatrix_apply]
+        exact (y.inv i j).prop
 
 -- the clever way to prove this is a theorem of the form "if A is a compact submonoid of R
 -- then Aˣ is a compact subgroup of Rˣ"
