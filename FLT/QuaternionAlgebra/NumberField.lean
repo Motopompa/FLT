@@ -127,8 +127,51 @@ theorem GL2.localFullLevel.isOpen (v : HeightOneSpectrum (𝓞 F)) :
 -- the clever way to prove this is a theorem of the form "if A is a compact submonoid of R
 -- then Aˣ is a compact subgroup of Rˣ"
 theorem GL2.localFullLevel.isCompact (v : HeightOneSpectrum (𝓞 F)) :
-    IsCompact (GL2.localFullLevel v).carrier :=
-  sorry
+    IsCompact (GL2.localFullLevel v).carrier := by
+  -- Establish that O_v is a CompactSpace
+  haveI : CompactSpace (v.adicCompletionIntegers F) :=
+    NumberField.instCompactSpaceAdicCompletionIntegers F v
+  -- Matrix over compact space is compact (Matrix = Fin 2 → Fin 2 → O_v)
+  haveI : CompactSpace (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F)) := by
+    unfold Matrix
+    infer_instance
+  haveI : CompactSpace (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F))ᵐᵒᵖ :=
+    MulOpposite.instCompactSpace
+  -- The range of Units.embedProduct is closed (pairs (x,y) with xy=1 and yx=1)
+  have hclosed : IsClosed (Set.range (Units.embedProduct (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F)))) := by
+    have h1 : IsClosed {p : Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) × (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F))ᵐᵒᵖ | p.1 * p.2.unop = 1} :=
+      isClosed_eq (continuous_fst.mul (MulOpposite.continuous_unop.comp continuous_snd)) continuous_const
+    have h2 : IsClosed {p : Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) × (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F))ᵐᵒᵖ | p.2.unop * p.1 = 1} :=
+      isClosed_eq ((MulOpposite.continuous_unop.comp continuous_snd).mul continuous_fst) continuous_const
+    have heq : Set.range (Units.embedProduct (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F))) =
+        {p | p.1 * p.2.unop = 1} ∩ {p | p.2.unop * p.1 = 1} := by
+      ext ⟨x, y⟩
+      simp only [Set.mem_range, Units.embedProduct_apply, Prod.mk.injEq, Set.mem_inter_iff, Set.mem_setOf_eq]
+      constructor
+      · rintro ⟨u, rfl, rfl⟩
+        exact ⟨u.val_inv, u.inv_val⟩
+      · rintro ⟨hxy, hyx⟩
+        exact ⟨⟨x, y.unop, hxy, hyx⟩, rfl, MulOpposite.unop_injective rfl⟩
+    rw [heq]
+    exact h1.inter h2
+  -- GL(2, O_v) is compact since it embeds as a closed subset of a compact space
+  haveI : CompactSpace (GL (Fin 2) (v.adicCompletionIntegers F)) := by
+    rw [← isCompact_univ_iff, Units.isEmbedding_embedProduct.isCompact_iff, Set.image_univ]
+    exact hclosed.isCompact
+  -- The matrix ring hom (subtype on matrices) is continuous
+  have hcont_mat : Continuous (RingHom.mapMatrix (v.adicCompletionIntegers F).subtype :
+      Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) →
+      Matrix (Fin 2) (Fin 2) (v.adicCompletion F)) := by
+    apply continuous_matrix
+    intro i j
+    simp only [RingHom.mapMatrix_apply, Matrix.map_apply]
+    exact continuous_induced_dom.comp (continuous_apply_apply i j)
+  -- Units.map of continuous map is continuous
+  have hcont : Continuous (Units.map (RingHom.mapMatrix (v.adicCompletionIntegers F).subtype).toMonoidHom :
+      GL (Fin 2) (v.adicCompletionIntegers F) → GL (Fin 2) (v.adicCompletion F)) :=
+    Continuous.units_map _ hcont_mat
+  -- Image of compact space under continuous map is compact
+  exact isCompact_range hcont
 
 lemma GL2.mem_localFullLevel {v : HeightOneSpectrum (𝓞 F)} {x : GL (Fin 2) (v.adicCompletion F)}
     (hx : x ∈ localFullLevel v) :
