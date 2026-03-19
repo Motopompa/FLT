@@ -77,14 +77,101 @@ theorem M2.localFullLevel.isCompact (v : HeightOneSpectrum (𝓞 F)) :
 -- the clever way to prove this is a theorem of the form "if A is an open submonoid of R
 -- then Aˣ is an open subgroup of Rˣ"
 theorem GL2.localFullLevel.isOpen (v : HeightOneSpectrum (𝓞 F)) :
-    IsOpen (GL2.localFullLevel v).carrier :=
-  sorry
+    IsOpen (GL2.localFullLevel v).carrier := by
+  rw [isOpen_induced_iff]
+  refine ⟨(M2.localFullLevel v).carrier ×ˢ (MulOpposite.unop ⁻¹' (M2.localFullLevel v).carrier), ?_, ?_⟩
+  · exact IsOpen.prod (M2.localFullLevel.isOpen v)
+      (MulOpposite.continuous_unop.isOpen_preimage _ (M2.localFullLevel.isOpen v))
+  · ext x
+    simp only [Set.mem_preimage, Set.mem_prod, Units.embedProduct_apply,
+      MulOpposite.unop_op, GL2.localFullLevel, M2.localFullLevel]
+    constructor
+    · intro ⟨hval, hinv⟩
+      let Mval : Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) :=
+        Matrix.of fun i j => ⟨(↑x : Matrix _ _ _) i j, hval i j⟩
+      let Minv : Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) :=
+        Matrix.of fun i j => ⟨(↑x⁻¹ : Matrix _ _ _) i j, hinv i j⟩
+      have injective_map : Function.Injective
+          ((v.adicCompletionIntegers F).subtype.mapMatrix :
+           Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) →
+           Matrix (Fin 2) (Fin 2) (v.adicCompletion F)) := by
+        intro a b hab
+        ext i j
+        exact congr_fun (congr_fun hab i) j
+      have hMval : (v.adicCompletionIntegers F).subtype.mapMatrix Mval = x.val := by
+        ext i j; simp [Mval, RingHom.mapMatrix_apply]
+      have hMinv : (v.adicCompletionIntegers F).subtype.mapMatrix Minv = x.inv := by
+        ext i j; simp [Minv, RingHom.mapMatrix_apply]
+      have hmul1 : Mval * Minv = 1 := by
+        apply injective_map
+        simp only [RingHom.map_mul, RingHom.map_one, hMval, hMinv]
+        exact x.val_inv
+      have hmul2 : Minv * Mval = 1 := by
+        apply injective_map
+        simp only [RingHom.map_mul, RingHom.map_one, hMval, hMinv]
+        exact x.inv_val
+      exact ⟨⟨Mval, Minv, hmul1, hmul2⟩, by ext i j; rfl⟩
+    · intro ⟨y, hy⟩
+      constructor
+      · intro i j
+        rw [← hy]
+        simp only [Units.coe_map, MonoidHom.coe_coe, RingHom.toMonoidHom_eq_coe,
+          RingHom.mapMatrix_apply]
+        exact (y.val i j).prop
+      · intro i j
+        rw [← hy]
+        simp only [Units.coe_map_inv, MonoidHom.coe_coe, RingHom.toMonoidHom_eq_coe,
+          RingHom.mapMatrix_apply]
+        exact (y.inv i j).prop
 
 -- the clever way to prove this is a theorem of the form "if A is a compact submonoid of R
 -- then Aˣ is a compact subgroup of Rˣ"
 theorem GL2.localFullLevel.isCompact (v : HeightOneSpectrum (𝓞 F)) :
-    IsCompact (GL2.localFullLevel v).carrier :=
-  sorry
+    IsCompact (GL2.localFullLevel v).carrier := by
+  -- Establish that O_v is a CompactSpace
+  haveI : CompactSpace (v.adicCompletionIntegers F) :=
+    NumberField.instCompactSpaceAdicCompletionIntegers F v
+  -- Matrix over compact space is compact (Matrix = Fin 2 → Fin 2 → O_v)
+  haveI : CompactSpace (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F)) := by
+    unfold Matrix
+    infer_instance
+  haveI : CompactSpace (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F))ᵐᵒᵖ :=
+    MulOpposite.instCompactSpace
+  -- The range of Units.embedProduct is closed (pairs (x,y) with xy=1 and yx=1)
+  have hclosed : IsClosed (Set.range (Units.embedProduct (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F)))) := by
+    have h1 : IsClosed {p : Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) × (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F))ᵐᵒᵖ | p.1 * p.2.unop = 1} :=
+      isClosed_eq (continuous_fst.mul (MulOpposite.continuous_unop.comp continuous_snd)) continuous_const
+    have h2 : IsClosed {p : Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) × (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F))ᵐᵒᵖ | p.2.unop * p.1 = 1} :=
+      isClosed_eq ((MulOpposite.continuous_unop.comp continuous_snd).mul continuous_fst) continuous_const
+    have heq : Set.range (Units.embedProduct (Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F))) =
+        {p | p.1 * p.2.unop = 1} ∩ {p | p.2.unop * p.1 = 1} := by
+      ext ⟨x, y⟩
+      simp only [Set.mem_range, Units.embedProduct_apply, Prod.mk.injEq, Set.mem_inter_iff, Set.mem_setOf_eq]
+      constructor
+      · rintro ⟨u, rfl, rfl⟩
+        exact ⟨u.val_inv, u.inv_val⟩
+      · rintro ⟨hxy, hyx⟩
+        exact ⟨⟨x, y.unop, hxy, hyx⟩, rfl, MulOpposite.unop_injective rfl⟩
+    rw [heq]
+    exact h1.inter h2
+  -- GL(2, O_v) is compact since it embeds as a closed subset of a compact space
+  haveI : CompactSpace (GL (Fin 2) (v.adicCompletionIntegers F)) := by
+    rw [← isCompact_univ_iff, Units.isEmbedding_embedProduct.isCompact_iff, Set.image_univ]
+    exact hclosed.isCompact
+  -- The matrix ring hom (subtype on matrices) is continuous
+  have hcont_mat : Continuous (RingHom.mapMatrix (v.adicCompletionIntegers F).subtype :
+      Matrix (Fin 2) (Fin 2) (v.adicCompletionIntegers F) →
+      Matrix (Fin 2) (Fin 2) (v.adicCompletion F)) := by
+    apply continuous_matrix
+    intro i j
+    simp only [RingHom.mapMatrix_apply, Matrix.map_apply]
+    exact continuous_induced_dom.comp (continuous_apply_apply i j)
+  -- Units.map of continuous map is continuous
+  have hcont : Continuous (Units.map (RingHom.mapMatrix (v.adicCompletionIntegers F).subtype).toMonoidHom :
+      GL (Fin 2) (v.adicCompletionIntegers F) → GL (Fin 2) (v.adicCompletion F)) :=
+    Continuous.units_map _ hcont_mat
+  -- Image of compact space under continuous map is compact
+  exact isCompact_range hcont
 
 lemma GL2.mem_localFullLevel {v : HeightOneSpectrum (𝓞 F)} {x : GL (Fin 2) (v.adicCompletion F)}
     (hx : x ∈ localFullLevel v) :
@@ -189,17 +276,94 @@ noncomputable def GL2.localTameLevel (v : HeightOneSpectrum (𝓞 F)) :
     rw [Valuation.map_sub_swap, v_det_val_mem_localFullLevel_eq_one ha.1]
     simp [ha.2]
 
+/-- The local tame level `U₁(v)` is a subgroup of the local full level `GL₂(𝒪ᵥ)`. -/
+lemma GL2.localTameLevel_le_localFullLevel (v : HeightOneSpectrum (𝓞 F)) :
+    localTameLevel v ≤ localFullLevel v := by
+  intro x ⟨hx, _⟩
+  exact hx
+
+/-- Membership in the local tame level `U₁(v)` can be characterized purely in terms of
+valuations: an element of `GL₂(Fᵥ)` lies in `U₁(v)` if and only if all entries have
+valuation at most 1, the determinant has valuation exactly 1, the diagonal entries are
+congruent modulo `v`, and the lower-left entry has valuation strictly less than 1. -/
+theorem GL2.mem_localTameLevel_iff {v : HeightOneSpectrum (𝓞 F)}
+    {x : GL (Fin 2) (v.adicCompletion F)} :
+    x ∈ localTameLevel v ↔
+      (∀ i j, Valued.v (x.val i j) ≤ 1) ∧ Valued.v x.val.det = 1 ∧
+      Valued.v (x.val 0 0 - x.val 1 1) < 1 ∧ Valued.v (x.val 1 0) < 1 := by
+  change x ∈ (localTameLevel v).carrier ↔ _
+  unfold localTameLevel
+  simp only [Set.mem_sep_iff, mem_localFullLevel_iff_v_le_one_and_v_det_eq_one]
+  constructor
+  · rintro ⟨⟨h1, h2⟩, h3, h4⟩
+    exact ⟨h1, h2, h3, h4⟩
+  · rintro ⟨h1, h2, h3, h4⟩
+    exact ⟨⟨h1, h2⟩, h3, h4⟩
+
 -- the clever way to prove this is a theorem of the form "if A is an open submonoid of R
 -- then Aˣ is an open subgroup of Rˣ"
 theorem GL2.localTameLevel.isOpen (v : HeightOneSpectrum (𝓞 F)) :
-    IsOpen (GL2.localTameLevel v).carrier :=
-  sorry
+    IsOpen (GL2.localTameLevel v).carrier := by
+  have h_full := GL2.localFullLevel.isOpen v
+  have h_eq : (GL2.localTameLevel v).carrier =
+    (GL2.localFullLevel v).carrier ∩
+    {x | Valued.v (x.val 0 0 - x.val 1 1) < 1} ∩
+    {x | Valued.v (x.val 1 0) < 1} := by
+    ext x
+    simp only [localTameLevel, Set.mem_inter_iff, Set.mem_setOf_eq]
+    tauto
+  rw [h_eq]
+  have cont_val : Continuous (fun x : GL (Fin 2) (v.adicCompletion F) => x.val) :=
+    Units.continuous_val
+  refine IsOpen.inter (IsOpen.inter h_full ?_) ?_
+  · have hopen : IsOpen {y : v.adicCompletion F | Valued.v y < 1} :=
+      Valued.isOpen_ball (R := v.adicCompletion F) 1
+    apply hopen.preimage
+    exact (cont_val.matrix_elem 0 0).sub (cont_val.matrix_elem 1 1)
+  · have hopen : IsOpen {y : v.adicCompletion F | Valued.v y < 1} :=
+      Valued.isOpen_ball (R := v.adicCompletion F) 1
+    apply hopen.preimage
+    exact cont_val.matrix_elem 1 0
 
 -- the clever way to prove this is a theorem of the form "if A is a compact submonoid of R
 -- then Aˣ is a compact subgroup of Rˣ"
 theorem GL2.localTameLevel.isCompact (v : HeightOneSpectrum (𝓞 F)) :
-    IsCompact (GL2.localTameLevel v).carrier :=
-  sorry
+    IsCompact (GL2.localTameLevel v).carrier := by
+  have hcompact := GL2.localFullLevel.isCompact v
+  have hsub : (GL2.localTameLevel v).carrier ⊆ (GL2.localFullLevel v).carrier := 
+    GL2.localTameLevel_le_localFullLevel v
+  refine hcompact.of_isClosed_subset ?_ hsub
+  -- Establish continuity of Units.val using embedProduct
+  have hval_cont : Continuous (fun (x : GL (Fin 2) (v.adicCompletion F)) => x.val) := by
+    have h : (fun x : GL (Fin 2) (v.adicCompletion F) => x.val) = 
+             Prod.fst ∘ Units.embedProduct (Matrix (Fin 2) (Fin 2) (v.adicCompletion F)) := by
+      ext x
+      simp only [Function.comp_apply, Units.embedProduct_apply]
+    rw [h]
+    exact continuous_fst.comp Units.continuous_embedProduct
+  -- The set {a | Valued.v a < 1} is closed in the ultrametric space
+  have hclosed_lt_one : IsClosed {a : v.adicCompletion F | Valued.v a < 1} := by
+    have heq : {a : v.adicCompletion F | Valued.v a < 1} = Metric.ball 0 1 := by
+      ext a
+      simp only [Set.mem_setOf_eq, Metric.mem_ball, dist_zero_right]
+      exact Valued.toNormedField.norm_lt_one_iff.symm
+    rw [heq]
+    exact IsUltrametricDist.isClosed_ball 0 1
+  -- Show the carrier is closed
+  unfold localTameLevel
+  apply IsClosed.inter
+  · exact hcompact.isClosed
+  · apply IsClosed.inter
+    · -- Preimage of closed set under continuous map for x₀₀ - x₁₁
+      have hcont : Continuous (fun x : GL (Fin 2) (v.adicCompletion F) => x.val 0 0 - x.val 1 1) := by
+        apply Continuous.sub
+        · exact hval_cont.matrix_elem 0 0
+        · exact hval_cont.matrix_elem 1 1
+      exact hclosed_lt_one.preimage hcont
+    · -- Preimage for x₁₀
+      have hcont : Continuous (fun x : GL (Fin 2) (v.adicCompletion F) => x.val 1 0) := 
+        hval_cont.matrix_elem 1 0
+      exact hclosed_lt_one.preimage hcont
 
 end IsDedekindDomain
 
