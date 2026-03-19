@@ -328,8 +328,42 @@ theorem GL2.localTameLevel.isOpen (v : HeightOneSpectrum (𝓞 F)) :
 -- the clever way to prove this is a theorem of the form "if A is a compact submonoid of R
 -- then Aˣ is a compact subgroup of Rˣ"
 theorem GL2.localTameLevel.isCompact (v : HeightOneSpectrum (𝓞 F)) :
-    IsCompact (GL2.localTameLevel v).carrier :=
-  sorry
+    IsCompact (GL2.localTameLevel v).carrier := by
+  have hcompact := GL2.localFullLevel.isCompact v
+  have hsub : (GL2.localTameLevel v).carrier ⊆ (GL2.localFullLevel v).carrier := 
+    GL2.localTameLevel_le_localFullLevel v
+  refine hcompact.of_isClosed_subset ?_ hsub
+  -- Establish continuity of Units.val using embedProduct
+  have hval_cont : Continuous (fun (x : GL (Fin 2) (v.adicCompletion F)) => x.val) := by
+    have h : (fun x : GL (Fin 2) (v.adicCompletion F) => x.val) = 
+             Prod.fst ∘ Units.embedProduct (Matrix (Fin 2) (Fin 2) (v.adicCompletion F)) := by
+      ext x
+      simp only [Function.comp_apply, Units.embedProduct_apply]
+    rw [h]
+    exact continuous_fst.comp Units.continuous_embedProduct
+  -- The set {a | Valued.v a < 1} is closed in the ultrametric space
+  have hclosed_lt_one : IsClosed {a : v.adicCompletion F | Valued.v a < 1} := by
+    have heq : {a : v.adicCompletion F | Valued.v a < 1} = Metric.ball 0 1 := by
+      ext a
+      simp only [Set.mem_setOf_eq, Metric.mem_ball, dist_zero_right]
+      exact Valued.toNormedField.norm_lt_one_iff.symm
+    rw [heq]
+    exact IsUltrametricDist.isClosed_ball 0 1
+  -- Show the carrier is closed
+  unfold localTameLevel
+  apply IsClosed.inter
+  · exact hcompact.isClosed
+  · apply IsClosed.inter
+    · -- Preimage of closed set under continuous map for x₀₀ - x₁₁
+      have hcont : Continuous (fun x : GL (Fin 2) (v.adicCompletion F) => x.val 0 0 - x.val 1 1) := by
+        apply Continuous.sub
+        · exact hval_cont.matrix_elem 0 0
+        · exact hval_cont.matrix_elem 1 1
+      exact hclosed_lt_one.preimage hcont
+    · -- Preimage for x₁₀
+      have hcont : Continuous (fun x : GL (Fin 2) (v.adicCompletion F) => x.val 1 0) := 
+        hval_cont.matrix_elem 1 0
+      exact hclosed_lt_one.preimage hcont
 
 end IsDedekindDomain
 
