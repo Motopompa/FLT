@@ -252,8 +252,27 @@ theorem GL2.mem_localTameLevel_iff {v : HeightOneSpectrum (𝓞 F)}
 -- the clever way to prove this is a theorem of the form "if A is an open submonoid of R
 -- then Aˣ is an open subgroup of Rˣ"
 theorem GL2.localTameLevel.isOpen (v : HeightOneSpectrum (𝓞 F)) :
-    IsOpen (GL2.localTameLevel v).carrier :=
-  sorry
+    IsOpen (GL2.localTameLevel v).carrier := by
+  have h_full := GL2.localFullLevel.isOpen v
+  have h_eq : (GL2.localTameLevel v).carrier =
+    (GL2.localFullLevel v).carrier ∩
+    {x | Valued.v (x.val 0 0 - x.val 1 1) < 1} ∩
+    {x | Valued.v (x.val 1 0) < 1} := by
+    ext x
+    simp only [localTameLevel, Set.mem_inter_iff, Set.mem_setOf_eq]
+    tauto
+  rw [h_eq]
+  have cont_val : Continuous (fun x : GL (Fin 2) (v.adicCompletion F) => x.val) :=
+    Units.continuous_val
+  refine IsOpen.inter (IsOpen.inter h_full ?_) ?_
+  · have hopen : IsOpen {y : v.adicCompletion F | Valued.v y < 1} :=
+      Valued.isOpen_ball (R := v.adicCompletion F) 1
+    apply hopen.preimage
+    exact (cont_val.matrix_elem 0 0).sub (cont_val.matrix_elem 1 1)
+  · have hopen : IsOpen {y : v.adicCompletion F | Valued.v y < 1} :=
+      Valued.isOpen_ball (R := v.adicCompletion F) 1
+    apply hopen.preimage
+    exact cont_val.matrix_elem 1 0
 
 -- the clever way to prove this is a theorem of the form "if A is a compact submonoid of R
 -- then Aˣ is a compact subgroup of Rˣ"
